@@ -7,11 +7,22 @@ $title = '帳號列表';
 $perPage = 3;
 
 
+$keyword = isset($_GET['keyword']) ? ($_GET['keyword']) : '';
+
 //用戶決定查看第幾頁，預設值為 1
 $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
 
+
+
+$where = 'WHERE 1 ';
+if (!empty($keyword)) {
+    // $where .= "AND `name` LIKE '%{$keyword}%' "; //sql injection
+    $where .= sprintf("AND `name` LIKE %s ", $pdo->quote('%' . $keyword . '%'));
+}
+
 //總共有幾筆
-$totalRows = $pdo->query("SELECT count(1) FROM account_list")->fetch(PDO::FETCH_NUM)[0];
+$totalRows = $pdo->query("SELECT count(1) FROM account_list $where")
+    ->fetch(PDO::FETCH_NUM)[0];
 
 //總共有幾頁，才能生出分頁按鈕
 $totalPages = ceil($totalRows / $perPage); //正數無條件進位
@@ -28,7 +39,8 @@ if ($page > $totalPages) {
 
 
 $sql = sprintf(
-    "SELECT * FROM account_list ORDER BY sid DESC LIMIT %s, %s",
+    "SELECT * FROM account_list %s ORDER BY sid DESC LIMIT %s, %s",
+    $where,
     ($page - 1) * $perPage,
     $perPage
 );
@@ -48,6 +60,14 @@ $rows = $pdo->query($sql)->fetchAll();
     }
 </style>
 <div class="container">
+    <div class="row">
+        <div class="col">
+            <form action="data-list.php" class="form-inline my-2 my-lg-0 d-flex justify-content-end">
+                <input class="form-control mr-sm-2" type="search" name="keyword" placeholder="Search" value="<?= htmlentities($keyword) ?>" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form>
+        </div>
+    </div>
     <div class="row">
         <div class="col">
             <nav aria-label="Page navigation example">
@@ -72,7 +92,7 @@ $rows = $pdo->query($sql)->fetchAll();
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        
+
                         <th scope="col"><i class="fas fa-trash-alt"></i></th>
                         <th scope="col">sid</th>
                         <th scope="col">name</th>
